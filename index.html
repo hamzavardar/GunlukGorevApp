@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Günlük Alışkanlık Takibi</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        button { padding: 10px 15px; border: none; background-color: #2ecc71; color: white; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #27ae60; }
+        ul { list-style: none; padding: 0; }
+        li { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9f9f9; border-bottom: 1px solid #eee; border-radius: 5px; margin-bottom: 8px; }
+        .tamamlandi { text-decoration: line-through; color: #aaa; }
+        .btn-sil { background-color: #e74c3c; padding: 5px 10px; font-size: 12px; }
+        .btn-sil:hover { background-color: #c0392b; }
+        .gorev-metni { cursor: pointer; flex: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎯 Alışkanlık Takipçisi</h2>
+    
+    <div class="input-group">
+        <input type="text" id="gorevInput" placeholder="Yeni bir alışkanlık yazın...">
+        <button onclick="gorevEkle()">Ekle</button>
+    </div>
+
+    <ul id="gorevListesi"></ul>
+</div>
+
+<script>
+    const API_URL = "http://localhost:5184/api/Gorevler"; 
+
+    // Backend'den görevleri çek ve ekrana listele
+    async function gorevleriGetir() {
+        try {
+            const response = await fetch(API_URL);
+            const gorevler = await response.json();
+            const liste = document.getElementById("gorevListesi");
+            liste.innerHTML = "";
+
+            gorevler.forEach(gorev => {
+                const li = document.createElement("li");
+                
+                li.innerHTML = `
+                    <span class="gorev-metni ${gorev.tamamlandiMi ? 'tamamlandi' : ''}" onclick="durumDegistir(${gorev.id})">
+                        ${gorev.tamamlandiMi ? '✅' : '⬜'} ${gorev.baslik}
+                    </span>
+                    <button class="btn-sil" onclick="gorevSil(${gorev.id})">Sil</button>
+                `;
+                liste.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Veriler çekilirken hata oluştu:", error);
+        }
+    }
+
+    // Backend'e yeni görev gönder
+    async function gorevEkle() {
+        const input = document.getElementById("gorevInput");
+        if (!input.value.trim()) return;
+
+        await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ baslik: input.value })
+        });
+
+        input.value = "";
+        gorevleriGetir(); // Listeyi güncelle
+    }
+
+    // Görevin durumunu güncelle (Yapıldı / Yapılmadı)
+    async function durumDegistir(id) {
+        await fetch(`${API_URL}/${id}`, { method: "PUT" });
+        gorevleriGetir();
+    }
+
+    // Görevi veri tabanından sil
+    async function gorevSil(id) {
+        if(confirm("Bu görevi silmek istediğinize emin misiniz?")) {
+            await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+            gorevleriGetir();
+        }
+    }
+
+    // Sayfa ilk açıldığında görevleri yükle
+    gorevleriGetir();
+</script>
+
+</body>
+</html>
